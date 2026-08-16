@@ -13,7 +13,7 @@ app.get("/api/v1/recipes", async (req, res) => {
     //JS-if query fails for any reason, doesn't crash server
     // sends back err response
     console.error(err);
-    res.status(500).json( { error: 'Something went wrong fetching your recipes.'});
+    res.status(500).json( { error: err.message, stack: err.stack });
     }
 })
 app.listen(port, () => {
