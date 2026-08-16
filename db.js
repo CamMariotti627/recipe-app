@@ -10,11 +10,3 @@ const pool = new Pool({
 });
 
 module.exports = pool;
-
-pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-        console.error('Connection error:', err);
-    } else {
-        console.log('Connected to Render DB! Current time:', res.rows[0]);
-    }
-});

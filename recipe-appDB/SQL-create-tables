@@ -1,0 +1,28 @@
+CREATE TABLE recipes (
+    recipe_id SERIAL PRIMARY KEY,
+    recipe_name VARCHAR(255) NOT NULL,
+    servings INTEGER,
+    total_calories INTEGER,
+    calories_per_serving INTEGER,
+    pairs_with VARCHAR(255),
+    suggested_sides TEXT
+);
+
+CREATE TABLE ingredients (
+    ingredient_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER REFERENCES recipes(recipe_id) ON DELETE CASCADE,
+    ingredient_name VARCHAR(100)
+);
+
+CREATE TABLE steps (
+    step_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER REFERENCES recipes(recipe_id) ON DELETE CASCADE,
+    step_number INTEGER,
+    instruction TEXT
+);
+
+CREATE TABLE recipe_meal_types (
+    recipe_id INTEGER REFERENCES recipes(recipe_id) ON DELETE CASCADE,
+    meal_type VARCHAR(20)
+);
+
