@@ -2,20 +2,88 @@ const pool = require('./db');
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 4000;
+
+app.use(express.json());
+
 //JS route handler = now async waits on database query
 app.get("/api/v1/recipes", async (req, res) => {
     try {
-        //SQL -selects every column/row from recipes table
-        const result = await pool.query('SELECT * FROM recipes');
-        //JS - sends rows back to JSON
+        //pulls ?name - something from URL if provided
+        const { name } = req.query;
+
+        let queryText = 'SELECT * FROM recipes';
+        let values = [];
+        // SQL adds WHERE clause only a name filter is provided
+        if (name) {
+            queryText += ' WHERE recipe_name ILIKE $1';
+            values.push(`%${name}%`);
+        }
+
+        const result = await pool.query(queryText, values);
         res.json(result.rows);
+
     } catch (err) {
     //JS-if query fails for any reason, doesn't crash server
     // sends back err response
     console.error(err);
-    res.status(500).json( { error: err.message, stack: err.stack });
+    res.status(500).json( { error: 'Something went wrong while fetching your recipes. Please try again later.' });
     }
 })
+
+//POST route, lets add recipe
+
+app.post("/api/v1/recipes", async (req, res) => {
+    try {
+        const { recipe_name, servings, total_calories, calories_per_serving, pairs_with, suggested_sides } = req.body;
+
+        const insertQuery = `
+        INSERT INTO recipes (recipe_name, servings, total_calories, calories_per_serving, pairs_with, suggested_sides)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+        `;
+
+        const values = [recipe_name, servings, total_calories, calories_per_serving, pairs_with, suggested_sides];
+
+        const result = await pool.query(insertQuery, values);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Something went wrong while adding your recipe.' });
+    }
+});
+
+// PUT endpoint: updates existing recipe by ID
+app.put("/api/v1/recipes/:id", async (req, res) => {
+    try {
+        // ID comes from URL 
+        const { id } = req.params;
+
+        const { recipe_name, servings, total_calories, calories_per_serving, pairs_with, suggested_sides } = req.body;
+
+        const updateQuery = `
+        UPDATE recipes
+        SET recipe_name = $1, servings = $2, total_calories = $3, calories_per_serving = $4, pairs_with = $5, suggested_sides = $6
+        WHERE recipe_id = $7
+        RETURNING *
+        `;
+
+    const values = [recipe_name, servings, total_calories, calories_per_serving, pairs_with, suggested_sides, id];
+
+    const result = await pool.query(updateQuery, values);
+
+    // if no rows came back, ID didn't exist
+         if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Recipe not found.' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Something went wrong updating your recipe.'});
+    }
+});
+
+
 app.listen(port, () => {
     console.log(`server running at http://localhost:${port}`);
 });
