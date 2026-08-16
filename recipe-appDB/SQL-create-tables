@@ -2,8 +2,8 @@ CREATE TABLE recipes (
     recipe_id SERIAL PRIMARY KEY,
     recipe_name VARCHAR(255) NOT NULL,
     servings INTEGER,
-    total_calories INTEGER,
-    calories_per_serving INTEGER,
+    total_calories NUMERIC,
+    calories_per_serving NUMERIC,
     pairs_with VARCHAR(255),
     suggested_sides TEXT
 );
@@ -25,4 +25,6 @@ CREATE TABLE recipe_meal_types (
     recipe_id INTEGER REFERENCES recipes(recipe_id) ON DELETE CASCADE,
     meal_type VARCHAR(20)
 );
+
+ALTER TABLE recipes ADD CONSTRAINT unique_recipe_name UNIQUE (recipe_name);
 
