@@ -4,8 +4,9 @@ const app = express();
 const port = process.env.PORT || 4000;
 
 app.use(express.json());
-
+//GET endpoint 1 search by recipe name:
 //JS route handler = now async waits on database query
+
 app.get("/api/v1/recipes", async (req, res) => {
     try {
         //pulls ?name - something from URL if provided
@@ -29,6 +30,64 @@ app.get("/api/v1/recipes", async (req, res) => {
     res.status(500).json( { error: 'Something went wrong while fetching your recipes. Please try again later.' });
     }
 })
+
+//GET endpoint 2: search by ingredient
+
+app.get("/api/v1/recipes/search-by-ingredient", async (req, res) => {
+    try {
+        const { ingredient } = req.query;
+
+        if (!ingredient) {
+            return res.status(400).json({ error: 'Please provide at least one ingredient'})
+        }
+
+        const ingredientList = ingredient.split(',').map(i => `%${i.trim()}%`);
+
+        const queryText = `
+        SELECT recipes.*
+        FROM recipes
+        JOIN ingredients ON recipes.recipe_id = ingredients.recipe_id
+        WHERE ingredients.ingredient_name ILIKE ANY ($1)
+        GROUP BY recipes.recipe_id
+        HAVING COUNT(DISTINCT ingredients.ingredient_name) >= $2
+        `;
+
+        const result = await pool.query(queryText, [ingredientList, ingredientList.length]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Something went wrong searching by ingredient.' });
+    }
+});
+
+//GET endpoint - exclude recipes containing specific ingredients (like allergies)
+
+app.get("/api/v1/recipes/exclude-ingredient", async (req, res) => {
+    try {
+        const { exclude } = req.query;
+
+        if (!exclude) {
+            return res.status(400).json({ error: 'Please provide at least one ingredient to exclude.' });
+        }
+
+        const excludeList = exclude.split(',').map(i => `%${i.trim()}%`);
+
+        const queryText = `
+        SELECT * FROM recipes
+        WHERE recipe_id NOT IN (
+            SELECT DISTINCT recipe_id FROM ingredients
+            WHERE ingredient_name ILIKE ANY ($1)
+        )   
+        `;
+
+        const result = await pool.query(queryText, [excludeList]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Something went wrong excluding ingredients.' });
+    }
+    
+});
 
 //POST route, lets add recipe
 
